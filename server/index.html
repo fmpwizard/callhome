@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width" name="viewport">
+    <title>Call Home</title>
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap-theme.min.css">
+</head>
+<body>
+    <div class="container" role="main">
+        <div class="row">
+            <div class="col-sm-12">
+                {{if .}}
+                <div class="alert alert-success alert-dismissible" role="alert">
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Close</span>
+                    </button>
+                    {{.}}
+                </div>
+                {{end}}
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <form role="form" action="/send" method="POST">
+                    <div class="form-group">
+                        <label for="room">Room</label>
+                        <select id="room" name="room" multiple class="form-control">
+                            <option>All</option>
+                            <option>Stella</option>
+                            <option>Diego</option>
+                            <option>Hayley</option>
+                            <option>Gabriel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea  name="message" class="form-control" id="message" placeholder="Enter message here" rows="10"></textarea>
+                    </div>            
+                    <button type="submit" class="btn btn-default">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="/js/jquery-1.11.1.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+</body>
+</html>

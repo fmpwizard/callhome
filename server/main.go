@@ -2,69 +2,85 @@ package main
 
 //server
 import (
-	"bytes"
-	"io/ioutil"
+	"fmt"
+	"github.com/iron-io/iron_go/mq"
+	"html/template"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func main() {
+	http.HandleFunc("/index", index)
 	http.HandleFunc("/read", read)
 	http.HandleFunc("/send", sendMessage)
-	http.HandleFunc("/ack", ackMessage)
+
+	http.Handle("/js/", http.StripPrefix("/js/", fs))
+	http.Handle("/css/", http.StripPrefix("/css/", fs))
+
+	//http.HandleFunc("/ack", ackMessage)
 	log.Println("Starting server ...")
+
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func sendMessage(rw http.ResponseWriter, req *http.Request) {
-	room := req.FormValue("room")
-	message := req.FormValue("message")
-	payload, _ := http.NewRequest("PUT", "http://127.0.0.1:4001/v2/keys/"+room, bytes.NewReader([]byte(message)))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
-	client := &http.Client{}
-	res, err := client.Do(payload)
-	defer res.Body.Close()
+func index(rw http.ResponseWriter, req *http.Request) {
+	tmpl, err := template.ParseFiles("index.html")
 	if err != nil {
-		log.Printf("ERROR: Could not update key in etcd: %v", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "Could not parse html template, ERROR: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-
+	tmpl.ExecuteTemplate(rw, "index.html", nil)
 }
 
-//TODO: implement this one
-func ackMessage(rw http.ResponseWriter, req *http.Request) {
+var fs = http.FileServer(http.Dir("static"))
+
+func sendMessage(rw http.ResponseWriter, req *http.Request) {
 	room := req.FormValue("room")
-	message := req.FormValue("message")
-	payload, _ := http.NewRequest("PUT", "http://127.0.0.1:4001/v2/keys/"+room, bytes.NewReader([]byte(message)))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
-	client := &http.Client{}
-	res, err := client.Do(payload)
-	defer res.Body.Close()
-	if err != nil {
-		log.Printf("ERROR: Could not update key in etcd: %v", err)
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+	if strings.TrimSpace(room) == "" {
+		http.Error(rw, "Missing room name", http.StatusInternalServerError)
+		return
 	}
+	queue := mq.New(room)
+	message := req.FormValue("message")
+	if strings.TrimSpace(message) == "" {
+		http.Error(rw, "Missing message text", http.StatusInternalServerError)
+		return
+	}
+	_, err := queue.PushString(message)
+	if err != nil {
+		log.Printf("ERROR: Could not send message to queue: %v", err)
+		http.Error(rw, "Could not send message to queue", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("index.html")
+	if err != nil {
+		http.Error(rw, "Could not parse html template, ERROR: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(rw, "index.html", "Message was sent.")
 
 }
 
 func read(rw http.ResponseWriter, req *http.Request) {
 	room := req.FormValue("room")
-	ret := fetchRoomMessage(room)
-	rw.Header().Add("Content-Type", "application/json")
-	rw.Write(ret)
-}
-
-func fetchRoomMessage(room string) []byte {
-	ret, err := http.Get("http://127.0.0.1:4001/v2/keys/" + room)
-	if err != nil {
-		log.Printf("ERROR: Could not get message for key: %s, we got error: %s", room, err.Error())
-		return nil
+	if strings.TrimSpace(room) == "" {
+		http.Error(rw, "Missing room name", http.StatusInternalServerError)
+		return
 	}
-	defer ret.Body.Close()
-	body, err := ioutil.ReadAll(ret.Body)
-	if err != nil {
-		log.Printf("ERROR: Could not read the body response, we got error: %s", err.Error())
-		return nil
+	queue := mq.New(room)
+	info, _ := queue.Info()
+	if info.Size > 0 {
+		msg, err := queue.Get()
+		if err != nil {
+			log.Printf("ERROR: Could not read from queue: %v", err)
+			http.Error(rw, "Could not read from queue", http.StatusInternalServerError)
+			return
+		}
+		msg.Delete()
+		fmt.Fprint(rw, msg.Body)
+	} else {
+		rw.WriteHeader(http.StatusNotModified)
 	}
-	return body
 }
