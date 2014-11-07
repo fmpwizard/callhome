@@ -21,7 +21,7 @@ func main() {
 	//http.HandleFunc("/ack", ackMessage)
 	log.Println("Starting server ...")
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":7070", nil))
 }
 
 func index(rw http.ResponseWriter, req *http.Request) {
