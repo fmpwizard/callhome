@@ -5,12 +5,18 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
 	"time"
 )
 
 func main() {
 	for {
-		log.Printf("Message: %s", string(fetchRoomMessage("Stella")))
+		msg := string(fetchRoomMessage("Stella"))
+		log.Printf("Message: %s", msg)
+		err := exec.Command("espeak", "-ven+f3", "-k5", "-s120", msg).Run()
+		if err != nil {
+			log.Printf("ERROR: Could not read the message %s", err.Error())
+		}
 		time.Sleep(2000 * time.Millisecond)
 	}
 }
