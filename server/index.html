@@ -9,31 +9,27 @@
 </head>
 <body>
     <div class="container" role="main">
+        {{if .Msg}}
         <div class="row">
             <div class="col-sm-12">
-                {{if .}}
                 <div class="alert alert-success alert-dismissible" role="alert">
                     <button type="button" class="close" data-dismiss="alert">
                         <span aria-hidden="true">&times;</span>
                         <span class="sr-only">Close</span>
                     </button>
-                    {{.}}
+                    {{.Msg}}
                 </div>
-                {{end}}
-
             </div>
         </div>
+        {{end}}
         <div class="row">
             <div class="col-sm-12">
-                <form role="form" action="/send" method="POST">
+                <form role="form" action="/index" method="POST">
                     <div class="form-group">
                         <label for="room">Room</label>
                         <select id="room" name="room" multiple class="form-control">
-                            <option>All</option>
-                            <option>Stella</option>
-                            <option>Diego</option>
-                            <option>Hayley</option>
-                            <option>Gabriel</option>
+                            {{range .Rooms}}<option>{{.}}</option>
+                            {{end}}
                         </select>
                     </div>
                     <div class="form-group">
